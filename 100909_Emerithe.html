@@ -1,0 +1,793 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A detailed summary of key chapters from 'An Introduction to Statistical Learning with Applications in Python' for MSDA9223, covering statistical learning techniques, Python implementations, and unsupervised learning methods.">
+    <meta name="keywords" content="statistical learning, machine learning, Python, data science, linear regression, logistic regression, SVM, random forests, cross-validation, lasso, ridge regression, unsupervised learning, PCA, clustering">
+    <meta name="author" content="Emerithe Dusabimana_100909">
+    <meta name="robots" content="index, follow">
+    <title>An Introduction to Statistical Learning - Detailed Summary</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            line-height: 1.7;
+            color: #1f2937;
+        }
+        .sidebar {
+            background: linear-gradient(to bottom, #eff6ff, #dbeafe);
+            padding: 1.5rem;
+            border-left: 6px solid #1d4ed8;
+            margin: 2rem 0;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .chapter-section {
+            margin-bottom: 3rem;
+            transition: transform 0.3s ease-in-out;
+        }
+        .chapter-section:hover {
+            transform: translateY(-4px);
+        }
+        .chapter12 {
+            background: linear-gradient(to bottom, #f5f3ff, #ede9fe);
+            border-left: 6px solid #7c3aed;
+        }
+        .toc-toggle {
+            display: none;
+        }
+        .toc-content {
+            display: block;
+        }
+        @media (max-width: 768px) {
+            .toc-content {
+                display: none;
+            }
+            .toc-toggle:checked + .toc-content {
+                display: block;
+            }
+            .chapter-section {
+                padding: 1rem;
+            }
+        }
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: linear-gradient(to bottom, #ffffff, #f8fafc);
+        }
+        pre {
+            background-color: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #2563eb;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .copy-btn:hover {
+            background-color: #1d4ed8;
+        }
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background-color: #2563eb;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            transition: opacity 0.3s ease;
+        }
+        .back-to-top:hover {
+            opacity: 0.9;
+        }
+        .search-bar {
+            transition: border-color 0.3s ease;
+        }
+        .search-bar:focus {
+            border-color: #2563eb;
+            outline: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <header class="bg-gradient-to-r from-blue-700 to-blue-900 text-white text-center py-12" role="banner">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">An Introduction to Statistical Learning with Applications in Python</h1>
+        <p class="text-lg md:text-xl mb-2">A Detailed Summary of Key Chapters</p>
+        <p class="text-sm">Emerithe Dusabimana_100909</p>
+        <p class="text-sm">Course: MSDA9223 - Data Mining and Information Retrieval | Date: July 6, 2025</p>
+    </header>
+
+    <nav class="sticky-nav shadow-lg" role="navigation" aria-label="Main navigation">
+        <div class="container mx-auto p-6">
+            <div class="mb-4">
+                <input type="text" id="search-bar" class="search-bar w-full p-2 border rounded-lg" placeholder="Search chapters..." aria-label="Search chapters">
+            </div>
+            <label for="toc-toggle" class="md:hidden text-blue-600 font-semibold cursor-pointer">Toggle Table of Contents</label>
+            <input type="checkbox" id="toc-toggle" class="toc-toggle hidden">
+            <div class="toc-content mt-4">
+                <h2 class="text-2xl font-semibold mb-4">Table of Contents</h2>
+                <ul class="grid grid-cols-1 md:grid-cols-2 gap-3 list-disc list-inside">
+                    <li><a href="#chapter1" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" aria-label="Chapter 1: Introduction">Chapter 1: Introduction</a></li>
+                    <li><a href="#chapter2" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" aria-label="Chapter 2: Statistical Learning">Chapter 2: Statistical Learning</a></li>
+                    <li><a href="#chapter3" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" aria-label="Chapter 3: Linear Regression">Chapter 3: Linear Regression</a></li>
+                    <li><a href="#chapter4" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" aria-label="Chapter 4: Classification">Chapter 4: Classification</a></li>
+                    <li><a href="#chapter5" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" aria-label="Chapter 5: Resampling Methods">Chapter 5: Resampling Methods</a></li>
+                    <li><a href="#chapter6" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" aria-label="Chapter 6: Linear Model Selection and Regularization">Chapter 6: Linear Model Selection and Regularization</a></li>
+                    <li><a href="#chapter7" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" aria-label="Chapter 7: Tree-Based Methods">Chapter 7: Tree-Based Methods</a></li>
+                    <li><a href="#chapter8" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" aria-label="Chapter 8: Support Vector Machines">Chapter 8: Support Vector Machines</a></li>
+                    <li><a href="#chapter9" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" aria-label="Chapter 9:Deep Learning">Chapter 9: Deep Learning</a></li>
+                    <li><a href="#chapter10" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" aria-label="Chapter 10: Unsupervised Learning">Chapter 10: Unsupervised Learning</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-6" role="main">
+        <!-- Overview Section -->
+        <section class="bg-white shadow-xl rounded-lg p-8 mb-8" aria-labelledby="overview-heading">
+            <h2 id="overview-heading" class="text-3xl font-semibold mb-4">Overview of the Book</h2>
+            <p class="mb-4">
+                "An Introduction to Statistical Learning with Applications in Python" by Gareth James, Daniela Witten, Trevor Hastie, Robert Tibshirani, and Jonathan Taylor is a definitive resource for data science and machine learning. It provides a rigorous yet accessible introduction to supervised and unsupervised learning, with practical Python implementations using scikit-learn, pandas, NumPy, and matplotlib. The book uses real-world datasets (e.g., Wage, Smarket, NCI60) and includes labs for hands-on learning. This webpage offers an in-depth summary of key chapters, including unsupervised learning techniques, with theoretical foundations, Python code, and practical applications.
+            </p>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">This Book is important</h4>
+                <p>Its integration of theory, Python-based labs, and real-world datasets makes it essential for students and practitioners in data science.</p>
+            </div>
+        </section>
+
+        <!-- Chapter Summaries -->
+        <section id="chapter1" class="chapter-section bg-white shadow-xl rounded-lg p-8" aria-labelledby="chapter1-heading">
+            <h2 id="chapter1-heading" class="text-3xl font-semibold mb-4">Chapter 1: Introduction</h2>
+            <h3 class="text-xl font-medium mb-2">Main Idea</h3>
+            <p class="mb-4">
+                Chapter 1 introduces statistical learning, distinguishing supervised learning (predicting outputs like wages from inputs like age) from unsupervised learning (discovering patterns like customer segments). It outlines key datasets (Wage, Smarket, NCI60) and emphasizes data preprocessing, visualization, and Python environment setup.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Techniques</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong>Supervised Learning</strong>: Regression for continuous outputs, classification for categorical outputs.</li>
+                <li><strong>Unsupervised Learning</strong>: Clustering (k-means) and dimensionality reduction (PCA).</li>
+                <li><strong>Python Setup</strong>: Using scikit-learn, pandas, and matplotlib for analysis.</li>
+                <li><strong>Data Preprocessing</strong>: Handling missing data and feature scaling with <code>StandardScaler</code>.</li>
+            </ul>
+            <h3 class="text-xl font-medium mb-2 mt-4">Practical Application</h3>
+            <p class="mb-4">
+                Predicting salaries in the Wage dataset or clustering gene expression data in NCI60, with visualizations to explore relationships.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Performance Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Metric</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Regression</td>
+                        <td>Mean Squared Error</td>
+                        <td>Measures average squared prediction error.</td>
+                    </tr>
+                    <tr>
+                        <td>Classification</td>
+                        <td>Accuracy</td>
+                        <td>Proportion of correct predictions.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">Sidebar:Datasets like Wage, Smarket, and NCI60 are introduced for practical applications in later chapters.</h4>
+            
+            <!-- Placeholder: Scatter plot of Wage dataset showing wage vs. age with regression line -->
+        </section>
+
+        <section id="chapter2" class="chapter-section bg-white shadow-xl rounded-lg p-8" aria-labelledby="chapter2-heading">
+            <h2 id="chapter2-heading" class="text-3xl font-semibold mb-4">Chapter 2: Statistical Learning</h2>
+            <h3 class="text-xl font-medium mb-2">Main Idea</h3>
+            <p class="mb-4">
+                This chapter provides a foundation for statistical learning, explaining how to model relationships between variables using a function \( f \). It covers the trade-off between model flexibility and interpretability, methods for assessing model accuracy, and introduces Python tools like NumPy and pandas for data manipulation.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Techniques</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong>Model Fitting</strong>:Estimating \( f \) to minimize prediction error.</li>
+                <li><strong>Mean Squared Error (MSE)</strong>: \( \text{MSE} = \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 \).</li>
+                <li><strong>Bias-Variance Decomposition</strong>: \( \text{Error} = \text{Bias}^2 + \text{Variance} + \text{Irreducible Error} \).</li>
+                <li><strong>Python Libraries</strong>: NumPy, pandas, scikit-learn for data and model handling.</li>
+                <li><strong>Train-Test Split</strong>: Using <code>train_test_split</code> for generalization.</li>
+            </ul>
+            <h3 class="text-xl font-medium mb-2 mt-4">Practical Application</h3>
+            <p class="mb-4">
+                Predicting house prices in the Boston Housing dataset, using MSE and learning curves to assess model performance.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Performance Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Formula</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>MSE</td>
+                        <td>\( \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 \)</td>
+                        <td>Regression evaluation</td>
+                    </tr>
+                    <tr>
+                        <td>R² Score</td>
+                        <td>\( 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2} \)</td>
+                        <td>Explained variance</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">Sidebar: Learning Curves</h4>
+                <p>Learning curves diagnose bias and variance by plotting training and validation errors.</p>
+                <pre>
+from sklearn.model_selection import learning_curve
+train_sizes, train_scores, val_scores = learning_curve(LinearRegression(), X, y, cv=5)
+plt.plot(train_sizes, train_scores.mean(axis=1), label='Training Score')
+plt.plot(train_sizes, val_scores.mean(axis=1), label='Validation Score')
+plt.legend()
+plt.show()
+                </pre>
+            </div>
+            <p class="mt-4">
+                <a href=https://github.com/edusabimana/DATA_MINING/blob/main/Ch2-statlearn-lab.ipynb class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" target="_blank" aria-label="GitHub Lab Notebook for Chapter 2">GitHub Lab Notebook</a>
+            </p>
+        </section>
+
+        <section id="chapter3" class="chapter-section bg-white shadow-xl rounded-lg p-8" aria-labelledby="chapter3-heading">
+            <h2 id="chapter3-heading" class="text-3xl font-semibold mb-4">Chapter 3: Linear Regression</h2>
+            <h3 class="text-xl font-medium mb-2">Main Idea</h3>
+            <p class="mb-4">
+                Linear regression models a continuous response as \( Y = \beta_0 + \beta_1 X_1 + \cdots + \beta_p X_p + \epsilon \), assuming linearity, normality, and homoscedasticity. The chapter covers simple and multiple regression, diagnostics, and extensions like polynomial regression.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Techniques</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong>Simple Linear Regression</strong>: \( Y = \beta_0 + \beta_1 X + \epsilon \), solved via least squares.</li>
+                <li><strong>Multiple Linear Regression</strong>: Incorporating interactions and multiple predictors.</li>
+                <li><strong>Diagnostics</strong>: Residual plots, Q-Q plots, VIF for multicollinearity.</li>
+                <li><strong>Qualitative Predictors</strong>: One-hot encoding with <code>get_dummies</code>.</li>
+                <li><strong>Polynomial Regression</strong>: Capturing non-linear relationships.</li>
+                <li><strong>Hypothesis Testing</strong>: T-tests and F-tests for significance.</li>
+            </ul>
+            <h3 class="text-xl font-medium mb-2 mt-4">Practical Application</h3>
+            <p class="mb-4">
+                Predicting gas mileage in the Auto dataset using horsepower, weight, and interactions, with diagnostics to validate assumptions.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Performance Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Formula</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>R²</td>
+                        <td>\( 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2} \)</td>
+                        <td>Variance explained</td>
+                    </tr>
+                    <tr>
+                        <td>Adjusted R²</td>
+                        <td>\( 1 - \frac{(1-R^2)(n-1)}{n-p-1} \)</td>
+                        <td>Penalizes complexity</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">Sidebar: Residual Diagnostics</h4>
+                <p>Residual plots identify violations of linearity or homoscedasticity.</p>
+                <pre>
+import statsmodels.api as sm
+model = sm.OLS(y, sm.add_constant(X)).fit()
+residuals = model.resid
+sm.qqplot(residuals, line='45')
+plt.show()
+                </pre>
+            </div>
+            <p class="mt-4">
+                <a href="https://github.com/edusabimana/DATA_MINING/blob/main/Ch03-linreg-lab.ipynb" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" target="_blank" aria-label="GitHub Lab Notebook for Chapter 3">GitHub Lab Notebook</a>
+            </p>
+        </section>
+
+        <section id="chapter4" class="chapter-section bg-white shadow-xl rounded-lg p-8" aria-labelledby="chapter4-heading">
+            <h2 id="chapter4-heading" class="text-3xl font-semibold mb-4">Chapter 4: Classification</h2>
+            <h3 class="text-xl font-medium mb-2">Main Idea</h3>
+            <p class="mb-4">
+                Classification predicts categorical outcomes using methods like logistic regression, discriminant analysis, and KNN. The chapter emphasizes their mathematical foundations and Python implementations, with evaluation via confusion matrices and ROC curves.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Techniques</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong>Logistic Regression</strong>: \( P(Y=1|X) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 X)}} \).</li>
+                <li><strong>Linear Discriminant Analysis (LDA)</strong>: Gaussian classes with shared covariance.</li>
+                <li><strong>Quadratic Discriminant Analysis (QDA)</strong>: Class-specific covariance matrices.</li>
+                <li><strong>K-Nearest Neighbors (KNN)</strong>: Majority vote of \( k \) nearest neighbors.</li>
+                <li><strong>Evaluation Metrics</strong>: Precision, recall, F1-score, ROC curves.</li>
+            </ul>
+            <h3 class="text-xl font-medium mb-2 mt-4">Practical Application</h3>
+            <p class="mb-4">
+                Predicting stock market direction in the Smarket dataset, comparing logistic regression and LDA with ROC analysis.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Performance Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Formula</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Precision</td>
+                        <td>\( \frac{\text{TP}}{\text{TP} + \text{FP}} \)</td>
+                        <td>Positive prediction accuracy</td>
+                    </tr>
+                    <tr>
+                        <td>Recall</td>
+                        <td>\( \frac{\{TP}}{\{TP} + \{FN}} \)</td>
+                        <td>Sensitivity to positive class</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">Sidebar: ROC and AUC</h4>
+                <p>ROC curves and AUC evaluate classifier performance across thresholds.</p>
+                <pre>
+from sklearn.metrics import roc_curve, auc
+fpr, tpr, _ = roc_curve(y_test, model.predict_proba(X_test)[:, 1])
+plt.plot(fpr, tpr, label=f'AUC = {auc(fpr, tpr):.2f}')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.legend()
+plt.show()
+                </pre>
+            </div>
+            <p class="mt-4">
+                <a href="https://github.com/edusabimana/DATA_MINING/blob/main/ch4-classification-lab.ipynb" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" target="_blank" aria-label="GitHub Lab Notebook for Chapter 4">GitHub Lab Notebook</a>
+            </p>
+        </section>
+
+        <section id="chapter5" class="chapter-section bg-white shadow-xl rounded-lg p-8" aria-labelledby="chapter5-heading">
+            <h2 id="chapter5-heading" class="text-3xl font-semibold mb-4">Chapter 5: Resampling Methods</h2>
+            <h3 class="text-xl font-medium mb-2">Main Idea</h3>
+            <p class="mb-4">
+                Resampling methods like cross-validation and the bootstrap estimate model performance and variability, ensuring robust generalization. The chapter covers their mathematical foundations and Python implementations.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Techniques</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong>K-Fold Cross-Validation</strong>: Dividing data into \( k \) folds for testing.</li>
+                <li><strong>Leave-One-Out Cross-Validation (LOOCV)</strong>: Using \( n-1 \) observations for training.</li>
+                <li><strong>Bootstrap</strong>: Sampling with replacement to estimate \( \hat{\theta} \).</li>
+                <li><strong>Stratified K-Fold</strong>: Ensuring balanced classes in classification.</li>
+                <li><strong>Model Selection</strong>: Optimizing hyperparameters with cross-validation.</li>
+            </ul>
+            <h3 class="text-xl font-medium mb-2 mt-4">Practical Application</h3>
+            <p class="mb-4">
+                Selecting the optimal polynomial degree for mpg prediction in the Auto dataset using k-fold cross-validation.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Performance Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cross-Validation Error</td>
+                        <td>Average test error across k folds</td>
+                    </tr>
+                    <tr>
+                        <td>Bootstrap CI</td>
+                        <td>Confidence intervals for estimates</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">Sidebar: Bootstrap for Robustness</h4>
+                <p>Bootstrap estimates standard errors for complex statistics.</p>
+                <pre>
+import numpy as np
+boot_stats = [np.mean(np.random.choice(data, size=len(data), replace=True)) for _ in range(1000)]
+conf_interval = np.percentile(boot_stats, [2.5, 97.5])
+print("95% CI:", conf_interval)
+                </pre>
+            </div>
+            <p class="mt-4">
+                <a href="https://github.com/edusabimana/DATA_MINING/blob/main/CH5-resample-lab.ipynb" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" target="_blank" aria-label="GitHub Lab Notebook for Chapter 5">GitHub Lab Notebook</a>
+            </p>
+        </section>
+
+        <section id="chapter6" class="chapter-section bg-white shadow-xl rounded-lg p-8" aria-labelledby="chapter6-heading">
+            <h2 id="chapter6-heading" class="text-3xl font-semibold mb-4">Chapter 6: Linear Model Selection and Regularization</h2>
+            <h3 class="text-xl font-medium mb-2">Main Idea</h3>
+            <p class="mb-4">
+                This chapter enhances linear regression through subset selection, shrinkage (ridge, lasso), and dimension reduction (PCR, PLS), balancing fit and complexity to prevent overfitting.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Techniques</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong>Best Subset Selection</strong>: Evaluating all \( 2^p \) models.</li>
+                <li><strong>Stepwise Selection</strong>: Forward/backward selection using AIC/BIC.</li>
+                <li><strong>Ridge Regression</strong>: \( \sum (y_i - \hat{y}_i)^2 + \lambda \sum \beta_j^2 \).</li>
+                <li><strong>Lasso</strong>: \( \sum (y_i - \hat{y}_i)^2 + \lambda \sum |\beta_j| \).</li>
+                <li><strong>Principal Component Regression (PCR)</strong>: Using PCA components.</li>
+                <li><strong>Partial Least Squares (PLS)</strong>: Supervised dimension reduction.</li>
+            </ul>
+            <h3 class="text-xl font-medium mb-2 mt-4">Practical Application</h3>
+            <p class="mb-4">
+                Predicting salaries in the Hitters dataset using lasso to select key predictors.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Performance Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>AIC</td>
+                        <td>Balances fit and complexity</td>
+                    </tr>
+                    <tr>
+                        <td>BIC</td>
+                        <td>Stricter complexity penalty</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">Sidebar: Lasso vs. Ridge</h4>
+                <p>Lasso selects variables by setting coefficients to zero, unlike ridge.</p>
+                <pre>
+from sklearn.linear_model import Lasso, Ridge
+lasso = Lasso(alpha=0.1).fit(X_train, y_train)
+ridge = Ridge(alpha=0.1).fit(X_train, y_train)
+print("Lasso Coefs:", lasso.coef_)
+print("Ridge Coefs:", ridge.coef_)
+                </pre>
+            </div>
+            <p class="mt-4">
+                <a href="https://github.com/edusabimana/DATA_MINING/blob/main/ch6-Lab-%20Linear%20Models%20and%20Regularization%20Methods.ipynb" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" target="_blank" aria-label="GitHub Lab Notebook for Chapter 6">GitHub Lab Notebook</a>
+            </p>
+        </section>
+
+        <section id="chapter7" class="chapter-section bg-white shadow-xl rounded-lg p-7" aria-labelledby="chapter7-heading">
+            <h2 id="chapter7-heading" class="text-3xl font-semibold mb-4">Chapter 7: Tree-Based Methods</h2>
+            <h3 class="text-xl font-medium mb-2">Main Idea</h3>
+            <p class="mb-4">
+                Tree-based methods, including decision trees and ensembles (bagging, random forests, boosting), handle non-linear relationships and are robust for regression and classification, implemented in scikit-learn.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Techniques</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong>Decision Trees</strong>: Recursive splitting using Gini index or entropy.</li>
+                <li><strong>Bagging</strong>: Bootstrap aggregation to reduce variance.</li>
+                <li><strong>Random Forests</strong>: Random feature selection to decorrelate trees.</li>
+                <li><strong>Gradient Boosting</strong>: Sequential fitting to residuals.</li>
+                <li><strong>Feature Importance</strong>: Measuring predictor importance via splits.</li>
+            </ul>
+            <h3 class="text-xl font-medium mb-2 mt-4">Practical Application</h3>
+            <p class="mb-4">
+                Predicting sales in the Carseats dataset using random forests, tuning <code>n_estimators</code>.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Performance Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Gini Index</td>
+                        <td>Node impurity for classification</td>
+                    </tr>
+                    <tr>
+                        <td>Out-of-Bag Error</td>
+                        <td>Generalization error in bagging</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">Sidebar: Feature Importance</h4>
+                <p>Random forests rank predictors by their contribution to splits.</p>
+                <pre>
+from sklearn.ensemble import RandomForestRegressor
+rf = RandomForestRegressor().fit(X, y)
+importances = rf.feature_importances_
+plt.bar(X.columns, importances)
+plt.xticks(rotation=45)
+plt.show()
+                </pre>
+            </div>
+            <p class="mt-4">
+                <a href="https://github.com/user/lab-notebooks/chapter8" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" target="_blank" aria-label="GitHub Lab Notebook for Chapter 8">GitHub Lab Notebook</a>
+            </p>
+        </section>
+
+        <section id="chapter8" class="chapter-section bg-white shadow-xl rounded-lg p-8" aria-labelledby="chapter8-heading">
+            <h2 id="chapter8-heading" class="text-3xl font-semibold mb-4">Chapter 8: Support Vector Machines</h2>
+            <h3 class="text-xl font-medium mb-2">Main Idea</h3>
+            <p class="mb-4">
+                Support Vector Machines (SVMs) maximize the margin between classes, using kernels for non-linear boundaries. The chapter covers their mathematical foundations and Python implementations in scikit-learn.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Techniques</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong>Maximal Margin Classifier</strong>: Optimizing \( \max_{w,b} M \) subject to \( y_i(w^T x_i + b) \geq M \).</li>
+                <li><strong>Support Vector Classifier</strong>: Soft margin with slack variables.</li>
+                <li><strong>Support Vector Machines</strong>: RBF kernel: \( K(x_i, x_j) = \exp(-\gamma \|x_i - x_j\|^2) \).</li>
+                <li><strong>Multi-class SVMs</strong>: One-vs-rest or one-vs-one.</li>
+                <li><strong>Hyperparameter Tuning</strong>: Optimizing \( C \) and \( \gamma \).</li>
+            </ul>
+            <h3 class="text-xl font-medium mb-2 mt-4">Practical Application</h3>
+            <p class="mb-4">
+                Classifying iris species using SVM with RBF kernel, tuning \( C \) and \( \gamma \).
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Performance Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Accuracy</td>
+                        <td>Proportion of correct predictions</td>
+                    </tr>
+                    <tr>
+                        <td>Support Vector Count</td>
+                        <td>Number of support vectors</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">Sidebar: Kernel Selection</h4>
+                <p>RBF kernels handle non-linear data, tuned via GridSearchCV.</p>
+                <pre>
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+param_grid = {'C': [0.1, 1, 10], 'gamma': [0.01, 0.1, 1]}
+grid = GridSearchCV(SVC(kernel='rbf'), param_grid, cv=5)
+grid.fit(X_train, y_train)
+print("Best params:", grid.best_params_)
+<button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentNode.textContent)">Copy Code</button>
+                </pre>
+            </div>
+            <p class="mt-4">
+                <a href="https://github.com/edusabimana/DATA_MINING/blob/main/ch9%20Lab-%20Support%20Vector%20Machines.ipynb" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" target="_blank" aria-label="GitHub Lab Notebook for Chapter 9">GitHub Lab Notebook</a>
+            </p>
+        </section>
+        <section id="chapter9" class="chapter-section chapter9 shadow-xl rounded-lg p-8" aria-labelledby="chapter9-heading">
+            <h2 id="chapter10-heading" class="text-3xl font-semibold mb-4">Chapter 10: Deep Learning</h2>
+            <h3 class="text-xl font-medium mb-2">Main Idea</h3>
+            <p class="mb-4">
+                Chapter 9 introduces deep learning, focusing on neural networks for complex pattern recognition in data. It covers feedforward neural networks, backpropagation, and specialized architectures like convolutional neural networks (CNNs), with Python implementations using TensorFlow/Keras. The chapter emphasizes applications in image classification and regression tasks.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Techniques</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong>Feedforward Neural Networks</strong>: Modeling \( Y = f(WX + b) \) with multiple layers and activation functions (e.g., ReLU, sigmoid).</li>
+                <li><strong>Backpropagation</strong>: Optimizing weights via gradient descent: \( W \gets W - \eta \frac{\partial L}{\partial W} \).</li>
+                <li><strong>Convolutional Neural Networks (CNNs)</strong>: Using convolutional layers for image data.</li>
+                <li><strong>Regularization</strong>: Dropout and weight decay to prevent overfitting.</li>
+                <li><strong>Hyperparameter Tuning</strong>: Optimizing learning rate, number of layers, and neurons.</li>
+            </ul>
+            <h3 class="text-xl font-medium mb-2 mt-4">Practical Application</h3>
+            <p class="mb-4">
+                Classifying digits in the MNIST dataset using a feedforward neural network or CNN, with hyperparameter tuning to optimize accuracy.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Performance Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Formula</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cross-Entropy Loss</td>
+                        <td>\( -\sum y_i \log(\hat{y}_i) \)</td>
+                        <td>Classification loss</td>
+                    </tr>
+                    <tr>
+                        <td>Accuracy</td>
+                        <td>Proportion of correct predictions</td>
+                        <td>Classification performance</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">Sidebar: Neural Network with Keras</h4>
+                <p>A simple neural network for MNIST digit classification using TensorFlow/Keras.</p>
+                <pre>
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+model = Sequential([
+    Dense(128, activation='relu', input_shape=(784,)),
+    Dense(10, activation='softmax')
+])
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.fit(X_train, y_train, epochs=5, validation_data=(X_test, y_test))
+<button class="copy-btn" onclick="navigator.clipboard.writeText(this.previousSibling.textContent)" aria-label="Copy code for neural network">Copy Code</button>
+                </pre>
+            </div>
+            <p class="mt-4">
+                <a href="https://github.com/user/lab-notebooks/chapter10" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" target="_blank" aria-label="GitHub Lab Notebook for Chapter 10">GitHub Lab Notebook</a>
+            </p>
+            <!-- Placeholder: Plot of neural network training and validation loss for MNIST dataset -->
+        </section>
+        <section id="chapter12" class="chapter-section chapter10 shadow-xl rounded-lg p-8" aria-labelledby="chapter10-heading">
+            <h2 id="chapter10-heading" class="text-3xl font-semibold mb-4">Chapter 12: Unsupervised Learning</h2>
+            <h3 class="text-xl font-medium mb-2">Main Idea</h3>
+            <p class="mb-4">
+                Chapter 10 explores unsupervised learning, where no response variable guides the analysis. It focuses on discovering patterns in data through dimensionality reduction (e.g., Principal Component Analysis) and clustering (e.g., k-means, hierarchical clustering). The chapter emphasizes Python implementations using scikit-learn and applications like market segmentation and gene expression analysis.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Techniques</h3>
+            <ul class="list-disc list-inside space-y-2">
+                <li><strong>Principal Component Analysis (PCA)</strong>: Reducing dimensionality by projecting data onto principal components: \( Z = XW \), where \( W \) maximizes variance.</li>
+                <li><strong>K-Means Clustering</strong>: Partitioning data into \( k \) clusters by minimizing within-cluster variance: \( \sum_{k=1}^K \sum_{i \in C_k} \| x_i - \mu_k \|^2 \).</li>
+                <li><strong>Hierarchical Clustering</strong>: Building a dendrogram using linkage methods (e.g., complete, average).</li>
+                <li><strong>Clustering Evaluation</strong>: Silhouette score and elbow method to choose \( k \).</li>
+                <li><strong>Scaling and Preprocessing</strong>: Standardizing features before PCA or clustering.</li>
+            </ul>
+            <h3 class="text-xl font-medium mb-2 mt-4">Practical Application</h3>
+            <p class="mb-4">
+                Clustering customers in the NCI60 dataset based on gene expression data or reducing dimensionality of the USArrests dataset using PCA to identify key patterns in crime statistics.
+            </p>
+            <h3 class="text-xl font-medium mb-2 mt-4">Performance Metrics</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Formula</th>
+                        <th>Use Case</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Silhouette Score</td>
+                        <td>\( s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))} \)</td>
+                        <td>Measures cluster cohesion and separation</td>
+                    </tr>
+                    <tr>
+                        <td>Explained Variance Ratio</td>
+                        <td>\( \frac{\sum_{i=1}^k \lambda_i}{\sum_{i=1}^p \lambda_i} \)</td>
+                        <td>Proportion of variance explained by PCA</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="sidebar">
+                <h4 class="font-semibold mb-2">Sidebar: K-Means Clustering</h4>
+                <p>K-means clusters data by iteratively assigning points to the nearest centroid, implemented in scikit-learn.</p>
+                <pre>
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+kmeans = KMeans(n_clusters=3, random_state=42).fit(X_scaled)
+print("Cluster labels:", kmeans.labels_)
+<button class="copy-btn" onclick="navigator.clipboard.writeText(this.parentNode.textContent)">Copy Code</button>
+                </pre>
+            </div>
+            <p class="mt-4">
+                <a href="https://github.com/edusabimana/DATA_MINING/blob/main/Ch12-Lab-%20Unsupervised%20Learning.ipynb" class="text-blue-600 hover:underline hover:text-blue-800 transition-colors" target="_blank" aria-label="GitHub Lab Notebook for Chapter 12">GitHub Lab Notebook</a>
+            </p>
+            <!-- Placeholder: Dendrogram of hierarchical clustering or scatter plot of PCA components for NCI60 dataset -->
+        </section>
+    </main>
+
+    <button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Back to top">Back to Top</button>
+
+    <footer class="bg-gray-800 text-white text-center py-8" role="contentinfo">
+        <p>Created for MSDA9223 - Data Mining and Information Retrieval | Instructor: Dr. Pacificique Nizevimana | July 6, 2025</p>
+        <p class="text-sm mt-2">Built with Tailwind CSS and JavaScript for interactivity and accessibility.</p>
+    </footer>
+
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Search functionality
+        const searchBar = document.getElementById('search-bar');
+        searchBar.addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.chapter-section').forEach(section => {
+                const text = section.textContent.toLowerCase();
+                section.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        });
+
+        // Copy button accessibility
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                navigator.clipboard.writeText(btn.parentNode.textContent);
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy Code', 2000);
+            });
+        });
+    </script>
+</body>
+</html>
